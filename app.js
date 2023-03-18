@@ -1,9 +1,9 @@
 require("dotenv").config();
 const express = require("express");
-const md5 = require("md5");
+const bcrypt = require("bcrypt");
 const ejs = require("ejs");
 const mongoose = require("mongoose");
-const encrypt = require("mongoose-encryption");
+const saltRounds = 10;
 const app = express();
 const bodyParser = require("body-parser");
 const port = 3000;
@@ -57,17 +57,23 @@ app.get("/submit", function (req, res) {
 
 app.post("/login", function (req, res) {
   const username = req.body.username;
-  const password = md5(req.body.password);
+  const password = req.body.password;
   User.findOne({ email: username })
     .then(function (founduser) {
       if (founduser) {
-        if (founduser.password === password) {
-          res.render("secrets.ejs");
-        } else {
-          res.send(
-            "<h1>ERROR: Please check your email and password and try again!</h1>"
-          );
-        }
+        bcrypt.compare(password, founduser.password, function (err, result) {
+          if (result === true) {
+            res.render("secrets.ejs");
+          } else {
+            res.send(
+              '<script>alert("Incorrect password, Please try again.")</script>'
+            );
+          }
+        });
+      } else {
+        res.send(
+          '<script>alert("Please register your account first!")</script>'
+        );
       }
     })
     .catch(function (err) {
@@ -76,18 +82,20 @@ app.post("/login", function (req, res) {
 });
 
 app.post("/register", function (req, res) {
-  let user = new User({
-    email: req.body.username,
-    password: md5(req.body.password),
-  });
-  user
-    .save()
-    .then(function () {
-      res.render("secrets.ejs");
-    })
-    .catch(function (err) {
-      console.log(err);
+  bcrypt.hash(req.body.password, saltRounds, function (err, hash) {
+    let user = new User({
+      email: req.body.username,
+      password: hash,
     });
+    user
+      .save()
+      .then(function () {
+        res.render("secrets.ejs");
+      })
+      .catch(function (err) {
+        console.log(err);
+      });
+  });
 });
 
 app.listen(port, function () {
