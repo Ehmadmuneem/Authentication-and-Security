@@ -82,19 +82,27 @@ app.post("/login", function (req, res) {
 });
 
 app.post("/register", function (req, res) {
-  bcrypt.hash(req.body.password, saltRounds, function (err, hash) {
-    let user = new User({
-      email: req.body.username,
-      password: hash,
-    });
-    user
-      .save()
-      .then(function () {
-        res.render("secrets.ejs");
-      })
-      .catch(function (err) {
-        console.log(err);
+  User.findOne({ email: req.body.username }).then(function (founduser) {
+    if (founduser) {
+      res.send(
+        "<h2>You've already registered, please try to login your account...</h2>"
+      );
+    } else {
+      bcrypt.hash(req.body.password, saltRounds, function (err, hash) {
+        let user = new User({
+          email: req.body.username,
+          password: hash,
+        });
+        user
+          .save()
+          .then(function () {
+            res.render("secrets.ejs");
+          })
+          .catch(function (err) {
+            console.log(err);
+          });
       });
+    }
   });
 });
 
